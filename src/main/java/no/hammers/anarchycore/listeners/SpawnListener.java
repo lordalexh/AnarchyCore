@@ -12,7 +12,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 
 public class SpawnListener implements Listener {
 
@@ -29,58 +28,57 @@ public class SpawnListener implements Listener {
             return;
         }
 
-        // Do not override if the player has a valid bed or respawn anchor
+        // Respect valid bed or anchor spawn points
         if (event.isBedSpawn() || event.isAnchorSpawn()) {
             return;
         }
 
-        Location randomSpawn = getRandomSpawnLocationSync();
-        if (randomSpawn != null) {
-            event.setRespawnLocation(randomSpawn);
-        }
+        Player player = event.getPlayer();
+
+        // Delay 1 tick on the player's Folia entity scheduler to allow default respawn to complete
+        player.getScheduler().runDelayed(plugin, task -> teleportToRandomRingSpawn(player), null, 1L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Handle initial first-join spawn ring asynchronously
+        // Handle initial first-join spawn ring
         if (!player.hasPlayedBefore() && plugin.getConfig().getBoolean("spawn.enabled", true)) {
-            getRandomSpawnLocationAsync().thenAccept(location -> {
-                if (location != null && player.isOnline()) {
-                    player.teleportAsync(location);
-                }
-            });
+            // Delay 1 tick on the player's Folia entity scheduler to avoid join packet overrides
+            player.getScheduler().runDelayed(plugin, task -> teleportToRandomRingSpawn(player), null, 1L);
         }
     }
 
     /**
-     * Non-blocking async chunk load & location calculation for first joins.
+     * Safely calculates a random ring location, asynchronously loads the chunk,
+     * and teleports the player on their Folia entity thread.
      */
-    private CompletableFuture<Location> getRandomSpawnLocationAsync() {
+    private void teleportToRandomRingSpawn(Player player) {
+        if (!player.isOnline()) {
+            return;
+        }
+
         World world = getSpawnWorld();
         int[] coords = calculateRandomXZ();
         int x = coords[0];
         int z = coords[1];
 
-        // Load/generate chunk asynchronously via Paper/Folia API (x >> 4 converts block coord to chunk coord)
-        return world.getChunkAtAsync(x >> 4, z >> 4).thenApply(chunk -> {
-            int y = world.getHighestBlockYAt(x, z) + 1;
-            return new Location(world, x + 0.5, y, z + 0.5);
+        // 1. Asynchronously load/generate the target chunk (x >> 4 converts block to chunk coord)
+        world.getChunkAtAsync(x >> 4, z >> 4).thenAccept(chunk -> {
+            // 2. Compute highest block Y now that the chunk is loaded into memory
+            int highestY = world.getHighestBlockYAt(x, z);
+            int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
+
+            Location targetLocation = new Location(world, x + 0.5, safeY, z + 0.5);
+
+            // 3. Dispatch teleport back to the player's Folia entity scheduler
+            player.getScheduler().run(plugin, task -> {
+                if (player.isOnline()) {
+                    player.teleportAsync(targetLocation);
+                }
+            }, null);
         });
-    }
-
-    /**
-     * Synchronous calculation for immediate respawn location override.
-     */
-    private Location getRandomSpawnLocationSync() {
-        World world = getSpawnWorld();
-        int[] coords = calculateRandomXZ();
-        int x = coords[0];
-        int z = coords[1];
-        int y = world.getHighestBlockYAt(x, z) + 1;
-
-        return new Location(world, x + 0.5, y, z + 0.5);
     }
 
     private World getSpawnWorld() {
