@@ -56,6 +56,7 @@ public final class AnarchyCore extends JavaPlugin {
 
         // Register Event Listeners
         var pm = getServer().getPluginManager();
+        pm.registerEvents(new SpawnListener(this), this);
         pm.registerEvents(new DeathListener(this), this);
         pm.registerEvents(new ChatListener(this), this);
         pm.registerEvents(new JoinListener(this), this);

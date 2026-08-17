@@ -4,27 +4,25 @@ plugins {
 
 group = "no.hammers"
 
-// Dynamically fetch version from GitHub Actions OR local Git tags
-fun getGitVersion(): String {
-    // 1. Check if running inside GitHub Actions (e.g. tag 'v1.1' -> '1.1')
-    val ciTag = System.getenv("GITHUB_REF_NAME")
-    if (!ciTag.isNullOrBlank()) {
-        return ciTag.removePrefix("v")
-    }
+// Dynamically fetch version in a Configuration-Cache compliant way
+val ciTag = System.getenv("GITHUB_REF_NAME")
 
-    // 2. Otherwise, check local Git tags via command line
-    return try {
-        val process = ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
-            .redirectError(ProcessBuilder.Redirect.DISCARD)
-            .start()
-        val tag = process.inputStream.bufferedReader().readText().trim()
-        if (tag.startsWith("v")) tag.removePrefix("v") else if (tag.isNotEmpty()) tag else "1.1.0"
-    } catch (e: Exception) {
+val gitVersion: String = if (!ciTag.isNullOrBlank()) {
+    ciTag.removePrefix("v")
+} else {
+    val execOutput = providers.exec {
+        commandLine("git", "describe", "--tags", "--abbrev=0")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+
+    if (execOutput.isNotBlank()) {
+        execOutput.removePrefix("v")
+    } else {
         "1.1.0" // Default fallback version
     }
 }
 
-version = getGitVersion()
+version = gitVersion
 
 repositories {
     mavenCentral()
@@ -32,7 +30,6 @@ repositories {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
-    // Added CodeMC repository for PacketEvents
     maven {
         name = "codemc-releases"
         url = uri("https://repo.codemc.io/repository/maven-releases/")
@@ -41,8 +38,6 @@ repositories {
 
 dependencies {
     compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
-
-    // PacketEvents API for Paper/Folia (Spigot/Paper platform)
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
 }
 
