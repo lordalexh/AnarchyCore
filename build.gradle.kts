@@ -4,10 +4,27 @@ plugins {
 
 group = "no.hammers"
 
-// Extract version from GitHub Actions Git Tag (e.g. "v1.0.0" -> "1.0.0")
-// Falls back to "1.0.0" for local dev builds
-val gitVersion: String? = System.getenv("GITHUB_REF_NAME")?.removePrefix("v")
-version = gitVersion ?: "1.0.0"
+// Dynamically fetch version from GitHub Actions OR local Git tags
+fun getGitVersion(): String {
+    // 1. Check if running inside GitHub Actions (e.g. tag 'v1.1' -> '1.1')
+    val ciTag = System.getenv("GITHUB_REF_NAME")
+    if (!ciTag.isNullOrBlank()) {
+        return ciTag.removePrefix("v")
+    }
+
+    // 2. Otherwise, check local Git tags via command line
+    return try {
+        val process = ProcessBuilder("git", "describe", "--tags", "--abbrev=0")
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start()
+        val tag = process.inputStream.bufferedReader().readText().trim()
+        if (tag.startsWith("v")) tag.removePrefix("v") else if (tag.isNotEmpty()) tag else "1.1.0"
+    } catch (e: Exception) {
+        "1.1.0" // Default fallback version
+    }
+}
+
+version = getGitVersion()
 
 repositories {
     mavenCentral()
@@ -31,8 +48,12 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }
 
 tasks {
