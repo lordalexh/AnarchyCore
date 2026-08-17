@@ -3,18 +3,20 @@ package no.hammers.anarchycore.commands;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class PingCommand implements CommandExecutor, TabCompleter {
+public class PingCommand extends Command {
+
+    public PingCommand() {
+        super("ping", "Check your or another player's latency.", "/ping [player]", List.of("latency"));
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean execute(CommandSender sender, String commandLabel, String[] args) {
         // 1. Check self ping (/ping)
         if (args.length == 0) {
             if (!(sender instanceof Player player)) {
@@ -50,8 +52,7 @@ public class PingCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        // Only provide online player autocompletion if sender has admin permission
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args) throws IllegalArgumentException {
         if (args.length == 1 && (sender.hasPermission("anarchycore.admin") || sender.hasPermission("anarchycore.ping.others"))) {
             List<String> completions = new ArrayList<>();
             String currentArg = args[0].toLowerCase();
