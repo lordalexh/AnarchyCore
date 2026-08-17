@@ -1,9 +1,9 @@
-name: Build AnarchyCore
+name: Build and Release AnarchyCore
 
 on:
   push:
     branches: [ "main" ]
-    tags: [ "v*.*.*" ] # Triggers release creation when you push a tag like v1.0.0
+    tags: [ "v*.*.*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Required to publish releases
+      contents: write # Grants permission to create GitHub Releases
 
     steps:
       - name: Checkout Repository
@@ -29,20 +29,21 @@ jobs:
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
 
+      # Step 1: Build the plugin JAR
       - name: Build with Gradle
         run: ./gradlew build
 
-      # 1. Upload dev build artifact (always runs)
+      # Step 2: Save as dev build artifact (Runs on every push to main)
       - name: Upload Plugin Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AnarchyCore-Build
           path: build/libs/*.jar
 
-      # 2. Create official GitHub Release (only runs when you push a tag)
+      # Step 3: Attach built JAR to GitHub Release (ONLY runs when a tag like v1.0.0 is pushed)
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/libs/*.jar
+          files: build/libs/AnarchyCore-*.jar
           generate_release_notes: true
