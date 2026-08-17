@@ -2,6 +2,13 @@ plugins {
     id("java-library")
 }
 
+group = "no.hammers"
+
+// Extract version from GitHub Actions Git Tag (e.g. "v1.0.0" -> "1.0.0")
+// Falls back to "1.0.0" for local dev builds
+val gitVersion: String? = System.getenv("GITHUB_REF_NAME")?.removePrefix("v")
+version = gitVersion ?: "1.0.0"
+
 repositories {
     mavenCentral()
     maven {
