@@ -2,10 +2,10 @@ name: Build and Release AnarchyCore
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
     tags: [ "v*.*.*" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
   build:
@@ -33,14 +33,14 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      # Step 2: Save as dev build artifact (Runs on every push to main)
+      # Step 2: Save as dev build artifact (Runs on main and develop pushes)
       - name: Upload Plugin Artifact
         uses: actions/upload-artifact@v4
         with:
           name: AnarchyCore-Build
           path: build/libs/*.jar
 
-      # Step 3: Attach built JAR to GitHub Release (ONLY runs when a tag like v1.0.0 is pushed)
+      # Step 3: Attach built JAR to GitHub Release (ONLY runs when a version tag is pushed)
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
