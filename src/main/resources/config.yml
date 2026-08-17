@@ -1,3 +1,12 @@
+# ---------------------------------------------------
+# Random Ring Spawn Settings
+# ---------------------------------------------------
+spawn:
+  enabled: true
+  world: "world"
+  min-radius: 500
+  max-radius: 2000
+
 # Private Welcome Message sent only to the player joining
 welcome-message:
   - "<gold><b>====================================</b></gold>"

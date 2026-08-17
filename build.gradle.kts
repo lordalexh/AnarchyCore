@@ -4,10 +4,25 @@ plugins {
 
 group = "no.hammers"
 
-// Extract version from GitHub Actions Git Tag (e.g. "v1.0.0" -> "1.0.0")
-// Falls back to "1.0.0" for local dev builds
-val gitVersion: String? = System.getenv("GITHUB_REF_NAME")?.removePrefix("v")
-version = gitVersion ?: "1.0.0"
+// Dynamically fetch version in a Configuration-Cache compliant way
+val ciTag = System.getenv("GITHUB_REF_NAME")
+
+val gitVersion: String = if (!ciTag.isNullOrBlank()) {
+    ciTag.removePrefix("v")
+} else {
+    val execOutput = providers.exec {
+        commandLine("git", "describe", "--tags", "--abbrev=0")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+
+    if (execOutput.isNotBlank()) {
+        execOutput.removePrefix("v")
+    } else {
+        "1.1.0" // Default fallback version
+    }
+}
+
+version = gitVersion
 
 repositories {
     mavenCentral()
@@ -15,7 +30,6 @@ repositories {
         name = "papermc"
         url = uri("https://repo.papermc.io/repository/maven-public/")
     }
-    // Added CodeMC repository for PacketEvents
     maven {
         name = "codemc-releases"
         url = uri("https://repo.codemc.io/repository/maven-releases/")
@@ -24,15 +38,17 @@ repositories {
 
 dependencies {
     compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
-
-    // PacketEvents API for Paper/Folia (Spigot/Paper platform)
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
 }
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(21)
 }
 
 tasks {
