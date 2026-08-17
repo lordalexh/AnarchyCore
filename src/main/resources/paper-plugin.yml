@@ -1,0 +1,11 @@
+name: AnarchyCore
+version: '${version}'
+main: no.hammers.anarchycore.AnarchyCore
+api-version: '1.20'
+folia-supported: true
+description: 'Complete anarchy core for 2b2t.no'
+dependencies:
+  server:
+    packetevents:
+      load: BEFORE
+      required: true

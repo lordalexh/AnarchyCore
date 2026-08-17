@@ -1,0 +1,92 @@
+# Private Welcome Message sent only to the player joining
+welcome-message:
+  - "<gold><b>====================================</b></gold>"
+  - "<yellow><b>Welcome to 2B2T.NO!</b></yellow>"
+  - "<gray>No rules. Pure Nordic anarchy survival.</gray>"
+  - "<gray>Type <gold>/help</gold> for available commands.</gray>"
+  - "<gold><b>====================================</b></gold>"
+
+# Custom /help Menu
+help-message:
+  - "<gold><b>=== 2B2T.NO Commands & Info ===</b></gold>"
+  - "<gold>/help</gold> <gray>- Show this help menu</gray>"
+  - "<gold>/msg <player> <text></gold> <gray>- Send a private message</gray>"
+  - "<gold>/r <text></gold> <gray>- Reply to last private message</gray>"
+  - "<gold>/toggledeaths</gold> <gray>- Toggle receiving death messages</gray>"
+  - "<gold>/kill</gold> <gray>- Self-terminate to escape traps</gray>"
+  - "<gold>/ping</gold> <gray>- Check your latency</gray>"
+  - "<gold>/tps</gold> <gray>- Check server TPS and performance</gray>"
+  - "<gold>/stats [player]</gold> <gray>- View player statistics</gray>"
+  - "<gray>Type <green>></green> in chat for 4chan-style greentext.</gray>"
+  - "<gold><b>================================</b></gold>"
+
+combat-tag-seconds: 15
+
+# Commands that are blocked while combat tagged
+blocked-combat-commands:
+  - "kill"
+  - "suicide"
+  - "msg"
+  - "tell"
+  - "w"
+  - "whisper"
+  - "r"
+  - "reply"
+  - "toggledeaths"
+
+og-prefix: "<gray>[<gold>OG</gold>]</gray> "
+og-threshold: 100 # First 100 players automatically get OG status
+
+# Explicit list of usernames or UUIDs who are OGs regardless of join order
+og-players:
+  - "LordAlexHAlt"
+
+server-domain: "2b2t.no"
+unique-player-count: 0
+
+tablist:
+  header: "<gold><b>2B2T.NO</b></gold>\n<gray>The Nordic Anarchy Server</gray>"
+  footer: "<gray>Ping: <ping> | TPS: <tps> <dark_gray>(<mspt>ms)</dark_gray></gray>"
+
+illegal-items:
+  - BEDROCK
+  - END_PORTAL_FRAME
+  - BARRIER
+  - COMMAND_BLOCK
+  - CHAIN_COMMAND_BLOCK
+  - REPEATING_COMMAND_BLOCK
+  - STRUCTURE_BLOCK
+  - JIGSAW
+  - LIGHT
+
+messages:
+  combat-log:
+    - "<gray><red><victim></red> logged out while in combat and was slain.</gray>"
+    - "<gray><red><victim></red> tried to escape combat and paid the ultimate price.</gray>"
+    - "<gray><red><victim></red> combat logged and was killed.</gray>"
+  pvp:
+    - "<gray><red><victim></red> was put down by <green><killer></green> using [<gold><weapon></gold>]</gray>"
+    - "<gray><red><victim></red> got erased by <green><killer></green></gray>"
+  suicide:
+    - "<gray><red><victim></red> decided to end it all.</gray>"
+  drowning:
+    - "<gray><red><victim></red> forgot how to breathe underwater.</gray>"
+  fall:
+    - "<gray><red><victim></red> discovered gravity the hard way.</gray>"
+  kinetic:
+    - "<gray><red><victim></red> flew full speed into a wall.</gray>"
+  lava:
+    - "<gray><red><victim></red> tried to swim in molten rock.</gray>"
+  fire:
+    - "<gray><red><victim></red> burnt to a crisp.</gray>"
+  void:
+    - "<gray><red><victim></red> fell out of the world.</gray>"
+  starvation:
+    - "<gray><red><victim></red> starved to death.</gray>"
+  explosion:
+    - "<gray><red><victim></red> was blown to smithereens.</gray>"
+  mobs:
+    generic:
+      - "<gray><red><victim></red> was slain by a <mob>.</gray>"
+  generic:
+    - "<gray><red><victim></red> died to their own incompetence.</gray>"
