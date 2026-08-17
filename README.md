@@ -72,3 +72,6 @@ cd AnarchyCore
 
 # Build project with Gradle
 ./gradlew build
+```
+### The compiled plugin jar file will be located at:
+build/libs/AnarchyCore-1.0-SNAPSHOT.jar
