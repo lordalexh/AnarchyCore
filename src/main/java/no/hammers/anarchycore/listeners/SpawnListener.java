@@ -28,57 +28,70 @@ public class SpawnListener implements Listener {
             return;
         }
 
-        // Respect valid bed or anchor spawn points
         if (event.isBedSpawn() || event.isAnchorSpawn()) {
             return;
         }
 
         Player player = event.getPlayer();
+        World world = getSpawnWorld();
+        int[] coords = calculateRandomXZ();
+        int x = coords[0];
+        int z = coords[1];
 
-        // Delay 1 tick on the player's Folia entity scheduler to allow default respawn to complete
-        player.getScheduler().runDelayed(plugin, task -> teleportToRandomRingSpawn(player), null, 1L);
+        // 1. Let the player cleanly finish the respawn event first.
+        // We use the GlobalRegionScheduler to delay the action by 10 ticks (0.5s),
+        // which prevents Folia from dropping the task during entity region transitions.
+        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> {
+            if (!player.isOnline()) return;
+
+            int skyY = Math.max(world.getMaxHeight() - 2, 255);
+            Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
+
+            // 2. teleportAsync natively forces the chunk to load and switches the thread.
+            player.teleportAsync(skySpawn).thenAccept(success -> {
+                if (success && player.isOnline()) {
+                    // 3. This callback strictly runs on the target chunk's region thread.
+                    // The chunk is guaranteed to be loaded here, so getHighestBlockYAt is 100% safe.
+                    int highestY = world.getHighestBlockYAt(x, z);
+                    int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
+
+                    Location groundLoc = new Location(world, x + 0.5, safeY, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
+
+                    player.setFallDistance(0); // Prevent any fall damage
+                    player.teleportAsync(groundLoc);
+                }
+            });
+        }, 10L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Handle initial first-join spawn ring
         if (!player.hasPlayedBefore() && plugin.getConfig().getBoolean("spawn.enabled", true)) {
-            // Delay 1 tick on the player's Folia entity scheduler to avoid join packet overrides
-            player.getScheduler().runDelayed(plugin, task -> teleportToRandomRingSpawn(player), null, 1L);
-        }
-    }
+            World world = getSpawnWorld();
+            int[] coords = calculateRandomXZ();
+            int x = coords[0];
+            int z = coords[1];
 
-    /**
-     * Safely calculates a random ring location, asynchronously loads the chunk,
-     * and teleports the player on their Folia entity thread.
-     */
-    private void teleportToRandomRingSpawn(Player player) {
-        if (!player.isOnline()) {
-            return;
-        }
+            int skyY = Math.max(world.getMaxHeight() - 2, 255);
+            Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
 
-        World world = getSpawnWorld();
-        int[] coords = calculateRandomXZ();
-        int x = coords[0];
-        int z = coords[1];
+            // Same logic as respawn, but no delay is needed because the player is already fully joined.
+            player.teleportAsync(skySpawn).thenAccept(success -> {
+                if (success && player.isOnline()) {
+                    int highestY = world.getHighestBlockYAt(x, z);
+                    int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
 
-        // 1. Asynchronously load/generate the target chunk (x >> 4 converts block to chunk coord)
-        world.getChunkAtAsync(x >> 4, z >> 4).thenAccept(chunk -> {
-            // 2. Compute highest block Y now that the chunk is loaded into memory
-            int highestY = world.getHighestBlockYAt(x, z);
-            int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
+                    Location groundLoc = new Location(world, x + 0.5, safeY, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
 
-            Location targetLocation = new Location(world, x + 0.5, safeY, z + 0.5);
-
-            // 3. Dispatch teleport back to the player's Folia entity scheduler
-            player.getScheduler().run(plugin, task -> {
-                if (player.isOnline()) {
-                    player.teleportAsync(targetLocation);
+                    player.setFallDistance(0);
+                    player.teleportAsync(groundLoc);
                 }
-            }, null);
-        });
+            });
+        }
     }
 
     private World getSpawnWorld() {

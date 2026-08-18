@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AnarchyCore extends JavaPlugin {
 
@@ -27,6 +28,7 @@ public final class AnarchyCore extends JavaPlugin {
     private final Set<UUID> combatLogDeaths = ConcurrentHashMap.newKeySet();
     private final Set<UUID> pendingRelogNotices = ConcurrentHashMap.newKeySet();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final AtomicInteger uniquePlayers = new AtomicInteger(0);
 
     @Override
     public void onLoad() {
@@ -39,6 +41,9 @@ public final class AnarchyCore extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        // Ensure join counter syncs with existing players in config.yml on startup
+        loadUniquePlayerCount();
 
         // Initialize PacketEvents & Register Network Listener
         PacketEvents.getAPI().init();
@@ -74,6 +79,27 @@ public final class AnarchyCore extends JavaPlugin {
     public void onDisable() {
         // Terminate PacketEvents pipeline cleanly on shutdown
         PacketEvents.getAPI().terminate();
+    }
+
+    /**
+     * Scans config.yml on startup to seed the highest existing join number.
+     * Prevents duplicate join-number #1 and #2 on server restarts.
+     */
+    private void loadUniquePlayerCount() {
+        int max = getConfig().getInt("unique-player-count", 0);
+
+        if (getConfig().isConfigurationSection("players")) {
+            for (String uuidStr : getConfig().getConfigurationSection("players").getKeys(false)) {
+                int joinNum = getConfig().getInt("players." + uuidStr + ".join-number", 0);
+                if (joinNum > max) {
+                    max = joinNum;
+                }
+            }
+        }
+
+        uniquePlayers.set(max);
+        getConfig().set("unique-player-count", max);
+        saveConfig();
     }
 
     private void registerCommand(Command command) {
@@ -255,7 +281,7 @@ public final class AnarchyCore extends JavaPlugin {
     }
 
     public synchronized int incrementUniquePlayers() {
-        int count = getConfig().getInt("unique-player-count", 0) + 1;
+        int count = uniquePlayers.incrementAndGet();
         getConfig().set("unique-player-count", count);
         saveConfig();
         return count;
