@@ -37,12 +37,30 @@ public final class AnarchyCore extends JavaPlugin {
     private final Map<UUID, Long> lastChatTime = new ConcurrentHashMap<>();
     private final Set<UUID> socialSpyEnabled = ConcurrentHashMap.newKeySet();
     private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Set<UUID>> ignoredPlayers = new ConcurrentHashMap<>();
 
     public int getChatSlowdown() { return chatSlowdown; }
     public void setChatSlowdown(int chatSlowdown) { this.chatSlowdown = chatSlowdown; }
     public Map<UUID, Long> getLastChatTime() { return lastChatTime; }
     public Set<UUID> getSocialSpyEnabled() { return socialSpyEnabled; }
     public Set<UUID> getFrozenPlayers() { return frozenPlayers; }
+    public Map<UUID, Set<UUID>> getIgnoredPlayers() { return ignoredPlayers; }
+
+    public boolean isIgnoring(UUID player, UUID target) {
+        Set<UUID> ignored = ignoredPlayers.get(player);
+        return ignored != null && ignored.contains(target);
+    }
+
+    public boolean toggleIgnore(UUID player, UUID target) {
+        Set<UUID> ignored = ignoredPlayers.computeIfAbsent(player, k -> ConcurrentHashMap.newKeySet());
+        if (ignored.contains(target)) {
+            ignored.remove(target);
+            return false; // no longer ignoring
+        } else {
+            ignored.add(target);
+            return true; // now ignoring
+        }
+    }
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
@@ -78,6 +96,10 @@ public final class AnarchyCore extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        // Suppress NBTAPI warnings since we're intentionally bundling it without relocation
+        de.tr7zw.changeme.nbtapi.utils.MinecraftVersion.disablePackageWarning();
+        de.tr7zw.changeme.nbtapi.utils.MinecraftVersion.disableBStats();
+
         saveDefaultConfig();
 
         this.databaseManager = new DatabaseManager(this);
@@ -122,6 +144,7 @@ public final class AnarchyCore extends JavaPlugin {
         registerCommand(new HealCommand());
         registerCommand(new FeedCommand());
         registerCommand(new FlyCommand());
+        registerCommand(new IgnoreCommand(this));
 
         // Register Event Listeners
         var pm = getServer().getPluginManager();
@@ -161,7 +184,7 @@ public final class AnarchyCore extends JavaPlugin {
 
         if (getConfig().isConfigurationSection("players")) {
             for (String uuidStr : getConfig().getConfigurationSection("players").getKeys(false)) {
-                int joinNum = getConfig().getInt("players." + uuidStr + ".join-number", 0);
+                int joinNum = getConfig().getInt(String.format("players.%s.join-number", uuidStr), 0);
                 if (joinNum > max) {
                     max = joinNum;
                 }
@@ -186,11 +209,11 @@ public final class AnarchyCore extends JavaPlugin {
         if (commandMap instanceof SimpleCommandMap simpleMap) {
             Map<String, Command> knownCommands = simpleMap.getKnownCommands();
             knownCommands.put(command.getName().toLowerCase(), command);
-            knownCommands.put("anarchycore:" + command.getName().toLowerCase(), command);
+            knownCommands.put(String.format("anarchycore:%s", command.getName().toLowerCase()), command);
 
             for (String alias : command.getAliases()) {
                 knownCommands.put(alias.toLowerCase(), command);
-                knownCommands.put("anarchycore:" + alias.toLowerCase(), command);
+                knownCommands.put(String.format("anarchycore:%s", alias.toLowerCase()), command);
             }
         }
     }
@@ -199,7 +222,7 @@ public final class AnarchyCore extends JavaPlugin {
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
             double rawMspt = fetchMspt();
             double roundedMspt = Math.round(rawMspt * 10.0) / 10.0;
-            String msptFormatted = roundedMspt + "ms";
+            String msptFormatted = String.format("%.2fms", roundedMspt);
 
             for (Player player : getServer().getOnlinePlayers()) {
                 player.getScheduler().run(this, scheduledTask -> {
@@ -264,7 +287,7 @@ public final class AnarchyCore extends JavaPlugin {
         if (isCombatTagged(player)) {
             long remaining = getCombatTimeRemaining(player);
             player.sendActionBar(miniMessage.deserialize(
-                    "<red><b>IN COMBAT</b></red> <gray>-</gray> <yellow>" + remaining + "s</yellow> <gray>remaining</gray>"
+                    String.format("<red><b>IN COMBAT</b></red> <gray>-</gray> <yellow>%ds</yellow> <gray>remaining</gray>", remaining)
             ));
         }
     }
@@ -282,8 +305,8 @@ public final class AnarchyCore extends JavaPlugin {
         String headerRaw = getConfig().getString("tablist.header", "<gold><b>2B2T.NO</b></gold>\n<gray>The Nordic Anarchy Server</gray>");
         String footerTemplate = getConfig().getString("tablist.footer", "<gray>Ping: <ping> | TPS: <tps> <dark_gray>(<mspt>)</dark_gray></gray>");
 
-        String pingFormatted = "<" + pingColorTag + ">" + player.getPing() + "ms</" + pingColorTag + ">";
-        String tpsFormatted = "<" + tpsColorTag + ">" + roundedTps + "</" + tpsColorTag + ">";
+        String pingFormatted = String.format("<%s>%dms</%s>", pingColorTag, player.getPing(), pingColorTag);
+        String tpsFormatted = String.format("<%s>%.2f</%s>", tpsColorTag, roundedTps, tpsColorTag);
 
         String footerRaw = footerTemplate
                 .replace("<ping>", pingFormatted)
@@ -296,7 +319,7 @@ public final class AnarchyCore extends JavaPlugin {
                     miniMessage.deserialize(footerRaw)
             );
         } catch (Exception e) {
-            getLogger().warning("Failed to update tablist for " + player.getName() + ": " + e.getMessage());
+            getLogger().warning(String.format("Failed to update tablist for %s: %s", player.getName(), e.getMessage()));
         }
     }
 
@@ -311,7 +334,7 @@ public final class AnarchyCore extends JavaPlugin {
             int joinNumber = databaseManager.getJoinNumber(player.getUniqueId());
             if (joinNumber == -1) {
                 // Fallback to config if not migrated
-                joinNumber = getConfig().getInt("players." + player.getUniqueId() + ".join-number", -1);
+                joinNumber = getConfig().getInt(String.format("players.%s.join-number", player.getUniqueId()), -1);
             }
             if (joinNumber > 0 && joinNumber <= ogThreshold) return true;
         }

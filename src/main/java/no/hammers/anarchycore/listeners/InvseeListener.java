@@ -28,10 +28,10 @@ public class InvseeListener implements Listener {
                 ItemStack[] contents = inv.getContents();
                 OfflineInvseeUtil.saveOfflineInventory(invHolder.getTargetUuid(), contents);
                 admin.sendMessage(miniMessage.deserialize(
-                        "<green>Saved offline inventory of " + invHolder.getTargetName() + ".</green>"));
+                        String.format("<green>Saved offline inventory of %s.</green>", invHolder.getTargetName())));
             } catch (Exception e) {
                 admin.sendMessage(miniMessage.deserialize(
-                        "<red>Failed to save offline inventory: " + e.getMessage() + "</red>"));
+                        String.format("<red>Failed to save offline inventory: %s</red>", e.getMessage())));
                 e.printStackTrace();
             }
         } else if (inv.getHolder() instanceof no.hammers.anarchycore.util.OfflineEnderchestHolder ecHolder) {
@@ -39,10 +39,10 @@ public class InvseeListener implements Listener {
                 ItemStack[] contents = inv.getContents();
                 OfflineInvseeUtil.saveOfflineEnderchest(ecHolder.getTargetUuid(), contents);
                 admin.sendMessage(miniMessage.deserialize(
-                        "<green>Saved offline enderchest of " + ecHolder.getTargetName() + ".</green>"));
+                        String.format("<green>Saved offline enderchest of %s.</green>", ecHolder.getTargetName())));
             } catch (Exception e) {
                 admin.sendMessage(miniMessage.deserialize(
-                        "<red>Failed to save offline enderchest: " + e.getMessage() + "</red>"));
+                        String.format("<red>Failed to save offline enderchest: %s</red>", e.getMessage())));
                 e.printStackTrace();
             }
         }
