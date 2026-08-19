@@ -34,14 +34,45 @@ public class EnderchestCommand extends Command {
             return true;
         }
 
-        Player target = Bukkit.getPlayer(args[0]);
-        if (target == null) {
-            player.sendMessage(miniMessage.deserialize("<red>Player not found.</red>"));
+        Player onlineTarget = Bukkit.getPlayer(args[0]);
+        if (onlineTarget != null) {
+            player.openInventory(onlineTarget.getEnderChest());
+            player.sendMessage(miniMessage.deserialize("<green>Opening enderchest of " + onlineTarget.getName() + " (online).</green>"));
             return true;
         }
 
-        player.openInventory(target.getEnderChest());
-        player.sendMessage(miniMessage.deserialize("<green>Opening enderchest of " + target.getName() + ".</green>"));
+        @SuppressWarnings("deprecation")
+        org.bukkit.OfflinePlayer offlineTarget = Bukkit.getOfflinePlayer(args[0]);
+        if (!offlineTarget.hasPlayedBefore()) {
+            player.sendMessage(miniMessage.deserialize("<red>Player has never joined this server.</red>"));
+            return true;
+        }
+
+        try {
+            org.bukkit.inventory.ItemStack[] items = no.hammers.anarchycore.util.OfflineInvseeUtil.loadOfflineEnderchest(offlineTarget.getUniqueId());
+            if (items == null) {
+                player.sendMessage(miniMessage.deserialize("<red>No player data found.</red>"));
+                return true;
+            }
+
+            String name = offlineTarget.getName() != null ? offlineTarget.getName() : args[0];
+
+            no.hammers.anarchycore.util.OfflineEnderchestHolder holder = new no.hammers.anarchycore.util.OfflineEnderchestHolder(offlineTarget.getUniqueId(), name);
+            org.bukkit.inventory.Inventory inv = Bukkit.createInventory(holder, 27, miniMessage.deserialize("<dark_gray>Player: " + name + "</dark_gray>"));
+            holder.setInventory(inv);
+
+            for (int i = 0; i < 27 && i < items.length; i++) {
+                if (items[i] != null) {
+                    inv.setItem(i, items[i]);
+                }
+            }
+
+            player.openInventory(inv);
+            player.sendMessage(miniMessage.deserialize("<green>Opening offline enderchest of " + name + ".</green>"));
+        } catch (Exception e) {
+            player.sendMessage(miniMessage.deserialize("<red>Failed to load offline enderchest: " + e.getMessage() + "</red>"));
+            e.printStackTrace();
+        }
         
         return true;
     }

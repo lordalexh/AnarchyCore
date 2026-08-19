@@ -134,6 +134,7 @@ public final class AnarchyCore extends JavaPlugin {
         pm.registerEvents(new SecurityListener(), this);
         pm.registerEvents(new CombatListener(this), this);
         pm.registerEvents(new FreezeListener(this), this);
+        pm.registerEvents(new InvseeListener(), this);
 
         // Start dynamic tablist & combat actionbar updater
         startTablistUpdater();
