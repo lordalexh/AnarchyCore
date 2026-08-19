@@ -2,11 +2,11 @@
 
 # ⚡ AnarchyCore
 
-**High-performance security, packet manipulation, and core utility engine built for Folia and Paper.**
+**High-performance security, moderation, and core utility engine built for Folia and Paper.**
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.20%2B-brightgreen?style=for-the-badge&logo=minecraft)
-![Platform](https://img.shields.io/badge/Platform-Folia%20%7C%20Paper-blue?style=for-the-badge)
-![Java](https://img.shields.io/badge/Java-17%2B-orange?style=for-the-badge&logo=openjdk)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.1+-brightgreen?style=for-the-badge&logo=minecraft)
+![Platform](https://img.shields.io/badge/Platform-Paper%20%7C%20Folia-blue?style=for-the-badge)
+![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)
 ![PacketEvents](https://img.shields.io/badge/PacketEvents-v2.13.0-purple?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-Gradle-blueviolet?style=for-the-badge&logo=gradle)
 
@@ -16,20 +16,22 @@
 
 ## 📖 Overview
 
-**AnarchyCore** provides essential, low-overhead security and packet-level modifications for high-throughput Minecraft anarchy servers. Built from the ground up to support multithreaded server architectures (**Folia** and **Paper**), it intercepts network packets before they ever reach the game engine.
+**AnarchyCore** is a comprehensive, low-overhead core plugin tailored for high-throughput Minecraft anarchy servers. Designed natively for **Paper** and **Folia**, it replaces traditional bloated "essentials" plugins with an optimized, multithread-friendly feature set. It handles everything from raw packet security and offline inventory editing to advanced moderation and combat tagging.
 
 ---
 
 ## ✨ Key Features
 
+* **🧰 Full Essentials Replacement**  
+  A completely optimized suite of core commands including `/ping`, `/tps`, `/msg`, `/reply`, `/suicide`, `/heal`, `/feed`, and `/gamemode`.
+* **🛠️ Advanced Moderation Suite**  
+  High-performance moderation tools including SQLite-backed `/ban`, `/mute`, `/kick`, `/freeze`, `/vanish`, and `/socialspy`. Server chat management with `/clearchat` and `/slowchat`.
+* **🎒 Offline Inventory & Enderchest Management**  
+  Fully bundled and autonomous `.dat` parsing system. Use `/invsee <player>` and `/enderchest <player>` on completely offline players. Interacts with modern 1.21+ Data Components without requiring external dependency plugins.
+* **⚔️ Combat Tagging System**  
+  Built-in combat system preventing players from safely logging out or executing specific commands while engaged in PvP.
 * **🛡️ Zero-Leak Command Security (Packet-Level)**  
-  Intercepts Brigadier command tree packets (`DECLARE_COMMANDS`) directly on the Netty network layer using **PacketEvents**. Blocked commands are stripped out before reaching the player client, preventing autocompletion leaks without client-side glitches.
-* **🔒 Bukkit Event Protection**  
-  Secondary execution barrier that catches and blocks direct command execution attempts for non-admin players.
-* **👑 Permission-Based Bypass**  
-  Configured admins and OPs retain full visibility and autocompletion access for server management commands.
-* **🚀 Velocity Proxy Ready**  
-  Fully optimized to work alongside Velocity proxy environments without packet collisions or command duplication.
+  Intercepts Brigadier command tree packets (`DECLARE_COMMANDS`) directly on the Netty network layer using **PacketEvents**. Blocked commands are stripped out before reaching the player client, preventing autocompletion leaks completely.
 
 ---
 
@@ -48,30 +50,32 @@ AnarchyCore implements a dual-layer defense system:
 
 ---
 
-## 🔑 Permissions
+## 🔑 Key Permissions
 
-| Permission | Description | Default |
-| :--- | :--- | :--- |
-| `anarchycore.admin` | Bypasses command restrictions and allows full command autocompletion | `OP` |
+| Permission | Description |
+| :--- | :--- |
+| `anarchycore.admin` | Bypasses command restrictions and allows full command autocompletion. |
+| `anarchycore.mod` | Grants access to moderation tools (kick, ban, mute, freeze, invsee, etc). |
 
 ---
 
 ## 🛠️ Building from Source
 
 ### Prerequisites
-* **JDK 17** or **JDK 21**
+* **JDK 21**
 * **Git**
 
 ### Compilation
-Clone the repository and build the shadow JAR using the Gradle wrapper:
+Clone the repository and build the fat JAR using the Gradle wrapper:
 
 ```bash
 # Clone the repository
-git clone [https://github.com/lordalexh/AnarchyCore.git](https://github.com/lordalexh/AnarchyCore.git)
+git clone https://github.com/lordalexh/AnarchyCore.git
 cd AnarchyCore
 
 # Build project with Gradle
 ./gradlew build
 ```
 ### The compiled plugin jar file will be located at:
-build/libs/AnarchyCore-1.0-SNAPSHOT.jar
+`build/libs/AnarchyCore-[version].jar`
+
