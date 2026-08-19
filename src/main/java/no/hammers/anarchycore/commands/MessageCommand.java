@@ -41,6 +41,12 @@ public class MessageCommand extends Command {
         }
 
         String body = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+
+        if (plugin.isIgnoring(target.getUniqueId(), player.getUniqueId())) {
+            player.sendMessage(miniMessage.deserialize("<red>This player is ignoring you.</red>"));
+            return true;
+        }
+
         plugin.setReplyTarget(player.getUniqueId(), target.getUniqueId());
 
         player.sendMessage(miniMessage.deserialize("<gray>to <light_purple><target></light_purple>: <text></gray>",

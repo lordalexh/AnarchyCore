@@ -37,12 +37,30 @@ public final class AnarchyCore extends JavaPlugin {
     private final Map<UUID, Long> lastChatTime = new ConcurrentHashMap<>();
     private final Set<UUID> socialSpyEnabled = ConcurrentHashMap.newKeySet();
     private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, Set<UUID>> ignoredPlayers = new ConcurrentHashMap<>();
 
     public int getChatSlowdown() { return chatSlowdown; }
     public void setChatSlowdown(int chatSlowdown) { this.chatSlowdown = chatSlowdown; }
     public Map<UUID, Long> getLastChatTime() { return lastChatTime; }
     public Set<UUID> getSocialSpyEnabled() { return socialSpyEnabled; }
     public Set<UUID> getFrozenPlayers() { return frozenPlayers; }
+    public Map<UUID, Set<UUID>> getIgnoredPlayers() { return ignoredPlayers; }
+
+    public boolean isIgnoring(UUID player, UUID target) {
+        Set<UUID> ignored = ignoredPlayers.get(player);
+        return ignored != null && ignored.contains(target);
+    }
+
+    public boolean toggleIgnore(UUID player, UUID target) {
+        Set<UUID> ignored = ignoredPlayers.computeIfAbsent(player, k -> ConcurrentHashMap.newKeySet());
+        if (ignored.contains(target)) {
+            ignored.remove(target);
+            return false; // no longer ignoring
+        } else {
+            ignored.add(target);
+            return true; // now ignoring
+        }
+    }
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
@@ -126,6 +144,7 @@ public final class AnarchyCore extends JavaPlugin {
         registerCommand(new HealCommand());
         registerCommand(new FeedCommand());
         registerCommand(new FlyCommand());
+        registerCommand(new IgnoreCommand(this));
 
         // Register Event Listeners
         var pm = getServer().getPluginManager();
