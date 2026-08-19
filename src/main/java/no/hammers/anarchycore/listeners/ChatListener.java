@@ -29,6 +29,19 @@ public class ChatListener implements Listener {
             player.sendMessage(miniMessage.deserialize("<red>You cannot speak because you are muted.\nReason: " + reason + "</red>"));
             return;
         }
+
+        if (plugin.getChatSlowdown() > 0 && !player.hasPermission("anarchycore.slowchat.bypass")) {
+            long last = plugin.getLastChatTime().getOrDefault(player.getUniqueId(), 0L);
+            long now = System.currentTimeMillis();
+            long waitTime = plugin.getChatSlowdown() * 1000L;
+            if (now - last < waitTime) {
+                event.setCancelled(true);
+                long remaining = (waitTime - (now - last)) / 1000L;
+                player.sendMessage(miniMessage.deserialize("<red>Chat is slowed. Please wait " + remaining + " seconds.</red>"));
+                return;
+            }
+            plugin.getLastChatTime().put(player.getUniqueId(), now);
+        }
         
         String plain = PlainTextComponentSerializer.plainText().serialize(event.message());
 

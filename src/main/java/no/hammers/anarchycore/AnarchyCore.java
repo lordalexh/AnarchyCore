@@ -33,6 +33,17 @@ public final class AnarchyCore extends JavaPlugin {
     private final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
     private DatabaseManager databaseManager;
 
+    private int chatSlowdown = 0;
+    private final Map<UUID, Long> lastChatTime = new ConcurrentHashMap<>();
+    private final Set<UUID> socialSpyEnabled = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
+
+    public int getChatSlowdown() { return chatSlowdown; }
+    public void setChatSlowdown(int chatSlowdown) { this.chatSlowdown = chatSlowdown; }
+    public Map<UUID, Long> getLastChatTime() { return lastChatTime; }
+    public Set<UUID> getSocialSpyEnabled() { return socialSpyEnabled; }
+    public Set<UUID> getFrozenPlayers() { return frozenPlayers; }
+
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }
@@ -97,6 +108,20 @@ public final class AnarchyCore extends JavaPlugin {
         registerCommand(new InvseeCommand());
         registerCommand(new EnderchestCommand());
         registerCommand(new AnarchyReloadCommand(this));
+        
+        // Admin Commands
+        registerCommand(new ClearEntitiesCommand());
+        registerCommand(new ClearInventoryCommand());
+        registerCommand(new ClearChatCommand());
+        registerCommand(new SlowChatCommand(this));
+        registerCommand(new SocialSpyCommand(this));
+        registerCommand(new TpCommand());
+        registerCommand(new TphereCommand());
+        registerCommand(new FreezeCommand(this));
+        registerCommand(new GamemodeCommand());
+        registerCommand(new HealCommand());
+        registerCommand(new FeedCommand());
+        registerCommand(new FlyCommand());
 
         // Register Event Listeners
         var pm = getServer().getPluginManager();
@@ -108,6 +133,7 @@ public final class AnarchyCore extends JavaPlugin {
         pm.registerEvents(new ItemCleanerListener(this), this);
         pm.registerEvents(new SecurityListener(), this);
         pm.registerEvents(new CombatListener(this), this);
+        pm.registerEvents(new FreezeListener(this), this);
 
         // Start dynamic tablist & combat actionbar updater
         startTablistUpdater();

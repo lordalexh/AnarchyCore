@@ -55,6 +55,14 @@ public class ReplyCommand extends Command {
         target.sendMessage(miniMessage.deserialize("<gray>from <light_purple><sender></light_purple>: <text></gray>",
                 Placeholder.parsed("sender", player.getName()), Placeholder.parsed("text", body)));
 
+        for (UUID spyId : plugin.getSocialSpyEnabled()) {
+            if (spyId.equals(player.getUniqueId()) || spyId.equals(target.getUniqueId())) continue;
+            Player spy = Bukkit.getPlayer(spyId);
+            if (spy != null && spy.isOnline()) {
+                spy.sendMessage(miniMessage.deserialize("<dark_gray>[Spy] " + player.getName() + " -> " + target.getName() + ": " + body + "</dark_gray>"));
+            }
+        }
+
         return true;
     }
 }
