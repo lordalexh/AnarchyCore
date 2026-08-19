@@ -50,7 +50,10 @@ public class StatsCommand extends Command {
         int mobKills = target.getStatistic(Statistic.MOB_KILLS);
 
         double kdr = deaths == 0 ? playerKills : Math.round((double) playerKills / deaths * 100.0) / 100.0;
-        int joinNumber = plugin.getConfig().getInt("players." + target.getUniqueId() + ".join-number", -1);
+        int joinNumber = plugin.getDatabaseManager().getJoinNumber(target.getUniqueId());
+        if (joinNumber == -1) {
+            joinNumber = plugin.getConfig().getInt("players." + target.getUniqueId() + ".join-number", -1);
+        }
 
         // 2. Render Output
         sender.sendMessage(miniMessage.deserialize(
