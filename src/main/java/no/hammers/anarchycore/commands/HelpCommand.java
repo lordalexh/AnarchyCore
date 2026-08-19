@@ -20,9 +20,20 @@ public class HelpCommand extends Command {
 
     @Override
     public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
-        List<String> lines = plugin.getConfig().getStringList("help-message");
+        boolean isAdmin = sender.hasPermission("anarchycore.admin");
+        
+        List<String> lines = isAdmin 
+                ? plugin.getConfig().getStringList("help-message-admin") 
+                : plugin.getConfig().getStringList("help-message");
+
         if (lines.isEmpty()) {
-            sender.sendMessage(miniMessage.deserialize("<gold>Type /msg, /kill, /tps, /ping, /stats, or /toggledeaths.</gold>"));
+            if (isAdmin) {
+                sender.sendMessage(miniMessage.deserialize("<gold>Admin Commands:</gold>"));
+                sender.sendMessage(miniMessage.deserialize("<gray>/ce, /ci, /kill, /cc, /sc, /socialspy, /tp, /tphere, /freeze, /gm, /heal, /feed, /fly, /ban, /mute, /kick, /vanish, /invsee, /ec, /areload</gray>"));
+                sender.sendMessage(miniMessage.deserialize(" "));
+            }
+            sender.sendMessage(miniMessage.deserialize("<gold>Player Commands:</gold>"));
+            sender.sendMessage(miniMessage.deserialize("<gray>/msg, /reply, /suicide, /tps, /ping, /stats, /toggledeaths, /help</gray>"));
             return true;
         }
 

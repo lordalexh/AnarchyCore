@@ -22,6 +22,27 @@ public class ChatListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
+        
+        if (plugin.getDatabaseManager().hasActivePunishment(player.getUniqueId(), "mute")) {
+            event.setCancelled(true);
+            String reason = plugin.getDatabaseManager().getActivePunishmentReason(player.getUniqueId(), "mute");
+            player.sendMessage(miniMessage.deserialize("<red>You cannot speak because you are muted.\nReason: " + reason + "</red>"));
+            return;
+        }
+
+        if (plugin.getChatSlowdown() > 0 && !player.hasPermission("anarchycore.slowchat.bypass")) {
+            long last = plugin.getLastChatTime().getOrDefault(player.getUniqueId(), 0L);
+            long now = System.currentTimeMillis();
+            long waitTime = plugin.getChatSlowdown() * 1000L;
+            if (now - last < waitTime) {
+                event.setCancelled(true);
+                long remaining = (waitTime - (now - last)) / 1000L;
+                player.sendMessage(miniMessage.deserialize("<red>Chat is slowed. Please wait " + remaining + " seconds.</red>"));
+                return;
+            }
+            plugin.getLastChatTime().put(player.getUniqueId(), now);
+        }
+        
         String plain = PlainTextComponentSerializer.plainText().serialize(event.message());
 
         // 1. Format 4chan Greentext

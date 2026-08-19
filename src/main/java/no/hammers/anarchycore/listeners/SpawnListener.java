@@ -12,7 +12,6 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
 
 public class SpawnListener implements Listener {
 
@@ -29,58 +28,71 @@ public class SpawnListener implements Listener {
             return;
         }
 
-        // Do not override if the player has a valid bed or respawn anchor
         if (event.isBedSpawn() || event.isAnchorSpawn()) {
             return;
         }
 
-        Location randomSpawn = getRandomSpawnLocationSync();
-        if (randomSpawn != null) {
-            event.setRespawnLocation(randomSpawn);
-        }
+        Player player = event.getPlayer();
+        World world = getSpawnWorld();
+        int[] coords = calculateRandomXZ();
+        int x = coords[0];
+        int z = coords[1];
+
+        int skyY = Math.max(world.getMaxHeight() - 2, 255);
+        Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
+
+        // 1. Immediately set the respawn location so they don't flash at world spawn
+        event.setRespawnLocation(skySpawn);
+
+        // 2. Schedule the ground teleport to happen after they have respawned
+        Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> {
+            if (!player.isOnline()) return;
+
+            // 3. teleportAsync natively forces the chunk to load and switches the thread.
+            player.teleportAsync(skySpawn).thenAccept(success -> {
+                if (success && player.isOnline()) {
+                    // 4. This callback strictly runs on the target chunk's region thread.
+                    // The chunk is guaranteed to be loaded here, so getHighestBlockYAt is 100% safe.
+                    int highestY = world.getHighestBlockYAt(x, z);
+                    int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
+
+                    Location groundLoc = new Location(world, x + 0.5, safeY, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
+
+                    player.setFallDistance(0); // Prevent any fall damage
+                    player.teleportAsync(groundLoc);
+                }
+            });
+        }, 5L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Handle initial first-join spawn ring asynchronously
         if (!player.hasPlayedBefore() && plugin.getConfig().getBoolean("spawn.enabled", true)) {
-            getRandomSpawnLocationAsync().thenAccept(location -> {
-                if (location != null && player.isOnline()) {
-                    player.teleportAsync(location);
+            World world = getSpawnWorld();
+            int[] coords = calculateRandomXZ();
+            int x = coords[0];
+            int z = coords[1];
+
+            int skyY = Math.max(world.getMaxHeight() - 2, 255);
+            Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
+
+            // Same logic as respawn, but no delay is needed because the player is already fully joined.
+            player.teleportAsync(skySpawn).thenAccept(success -> {
+                if (success && player.isOnline()) {
+                    int highestY = world.getHighestBlockYAt(x, z);
+                    int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
+
+                    Location groundLoc = new Location(world, x + 0.5, safeY, z + 0.5,
+                            player.getLocation().getYaw(), player.getLocation().getPitch());
+
+                    player.setFallDistance(0);
+                    player.teleportAsync(groundLoc);
                 }
             });
         }
-    }
-
-    /**
-     * Non-blocking async chunk load & location calculation for first joins.
-     */
-    private CompletableFuture<Location> getRandomSpawnLocationAsync() {
-        World world = getSpawnWorld();
-        int[] coords = calculateRandomXZ();
-        int x = coords[0];
-        int z = coords[1];
-
-        // Load/generate chunk asynchronously via Paper/Folia API (x >> 4 converts block coord to chunk coord)
-        return world.getChunkAtAsync(x >> 4, z >> 4).thenApply(chunk -> {
-            int y = world.getHighestBlockYAt(x, z) + 1;
-            return new Location(world, x + 0.5, y, z + 0.5);
-        });
-    }
-
-    /**
-     * Synchronous calculation for immediate respawn location override.
-     */
-    private Location getRandomSpawnLocationSync() {
-        World world = getSpawnWorld();
-        int[] coords = calculateRandomXZ();
-        int x = coords[0];
-        int z = coords[1];
-        int y = world.getHighestBlockYAt(x, z) + 1;
-
-        return new Location(world, x + 0.5, y, z + 0.5);
     }
 
     private World getSpawnWorld() {
