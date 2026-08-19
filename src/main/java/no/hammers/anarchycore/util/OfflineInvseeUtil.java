@@ -15,10 +15,10 @@ public class OfflineInvseeUtil {
     public static File getPlayerDataFile(UUID uuid) {
         File worldFolder = new File(Bukkit.getServer().getWorldContainer(), Bukkit.getWorlds().get(0).getName());
         
-        File f1 = new File(worldFolder, "playerdata/" + uuid + ".dat");
+        File f1 = new File(worldFolder, String.format("playerdata/%s.dat", uuid));
         if (f1.exists()) return f1;
         
-        File f2 = new File(worldFolder, "players/data/" + uuid + ".dat");
+        File f2 = new File(worldFolder, String.format("players/data/%s.dat", uuid));
         if (f2.exists()) return f2;
         
         // Default to playerdata if neither exists (for saving new files, though unlikely for invsee)

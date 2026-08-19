@@ -46,7 +46,7 @@ public class InvseeCommand extends Command {
         Player onlineTarget = Bukkit.getPlayer(args[0]);
         if (onlineTarget != null) {
             player.openInventory(onlineTarget.getInventory());
-            player.sendMessage(miniMessage.deserialize("<green>Opening inventory of " + onlineTarget.getName() + " (online).</green>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<green>Opening inventory of %s (online).</green>", onlineTarget.getName())));
             return true;
         }
 
@@ -70,7 +70,7 @@ public class InvseeCommand extends Command {
 
             // Create a tagged virtual inventory
             OfflineInvseeHolder holder = new OfflineInvseeHolder(offlineTarget.getUniqueId(), name);
-            Inventory inv = Bukkit.createInventory(holder, 45, miniMessage.deserialize("<dark_gray>Player: " + name + "</dark_gray>"));
+            Inventory inv = Bukkit.createInventory(holder, 45, miniMessage.deserialize(String.format("<dark_gray>Player: %s</dark_gray>", name)));
             holder.setInventory(inv);
 
             // Populate slots 0-40 with player items
@@ -92,9 +92,9 @@ public class InvseeCommand extends Command {
             }
 
             player.openInventory(inv);
-            player.sendMessage(miniMessage.deserialize("<green>Opening offline inventory of " + name + ".</green>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<green>Opening offline inventory of %s.</green>", name)));
         } catch (Exception e) {
-            player.sendMessage(miniMessage.deserialize("<red>Failed to load offline inventory: " + e.getMessage() + "</red>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<red>Failed to load offline inventory: %s</red>", e.getMessage())));
             e.printStackTrace();
         }
 

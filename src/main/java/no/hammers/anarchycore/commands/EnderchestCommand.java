@@ -37,7 +37,7 @@ public class EnderchestCommand extends Command {
         Player onlineTarget = Bukkit.getPlayer(args[0]);
         if (onlineTarget != null) {
             player.openInventory(onlineTarget.getEnderChest());
-            player.sendMessage(miniMessage.deserialize("<green>Opening enderchest of " + onlineTarget.getName() + " (online).</green>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<green>Opening enderchest of %s (online).</green>", onlineTarget.getName())));
             return true;
         }
 
@@ -58,7 +58,7 @@ public class EnderchestCommand extends Command {
             String name = offlineTarget.getName() != null ? offlineTarget.getName() : args[0];
 
             no.hammers.anarchycore.util.OfflineEnderchestHolder holder = new no.hammers.anarchycore.util.OfflineEnderchestHolder(offlineTarget.getUniqueId(), name);
-            org.bukkit.inventory.Inventory inv = Bukkit.createInventory(holder, 27, miniMessage.deserialize("<dark_gray>Player: " + name + "</dark_gray>"));
+            org.bukkit.inventory.Inventory inv = Bukkit.createInventory(holder, 27, miniMessage.deserialize(String.format("<dark_gray>Player: %s</dark_gray>", name)));
             holder.setInventory(inv);
 
             for (int i = 0; i < 27 && i < items.length; i++) {
@@ -68,9 +68,9 @@ public class EnderchestCommand extends Command {
             }
 
             player.openInventory(inv);
-            player.sendMessage(miniMessage.deserialize("<green>Opening offline enderchest of " + name + ".</green>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<green>Opening offline enderchest of %s.</green>", name)));
         } catch (Exception e) {
-            player.sendMessage(miniMessage.deserialize("<red>Failed to load offline enderchest: " + e.getMessage() + "</red>"));
+            player.sendMessage(miniMessage.deserialize(String.format("<red>Failed to load offline enderchest: %s</red>", e.getMessage())));
             e.printStackTrace();
         }
         
