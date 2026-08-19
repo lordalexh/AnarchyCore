@@ -38,19 +38,20 @@ public class SpawnListener implements Listener {
         int x = coords[0];
         int z = coords[1];
 
-        // 1. Let the player cleanly finish the respawn event first.
-        // We use the GlobalRegionScheduler to delay the action by 10 ticks (0.5s),
-        // which prevents Folia from dropping the task during entity region transitions.
+        int skyY = Math.max(world.getMaxHeight() - 2, 255);
+        Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
+
+        // 1. Immediately set the respawn location so they don't flash at world spawn
+        event.setRespawnLocation(skySpawn);
+
+        // 2. Schedule the ground teleport to happen after they have respawned
         Bukkit.getGlobalRegionScheduler().runDelayed(plugin, task -> {
             if (!player.isOnline()) return;
 
-            int skyY = Math.max(world.getMaxHeight() - 2, 255);
-            Location skySpawn = new Location(world, x + 0.5, skyY, z + 0.5);
-
-            // 2. teleportAsync natively forces the chunk to load and switches the thread.
+            // 3. teleportAsync natively forces the chunk to load and switches the thread.
             player.teleportAsync(skySpawn).thenAccept(success -> {
                 if (success && player.isOnline()) {
-                    // 3. This callback strictly runs on the target chunk's region thread.
+                    // 4. This callback strictly runs on the target chunk's region thread.
                     // The chunk is guaranteed to be loaded here, so getHighestBlockYAt is 100% safe.
                     int highestY = world.getHighestBlockYAt(x, z);
                     int safeY = Math.max(world.getMinHeight() + 1, highestY + 1);
@@ -62,7 +63,7 @@ public class SpawnListener implements Listener {
                     player.teleportAsync(groundLoc);
                 }
             });
-        }, 10L);
+        }, 5L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)

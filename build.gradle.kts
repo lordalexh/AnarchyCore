@@ -39,6 +39,7 @@ repositories {
 dependencies {
     compileOnly("dev.folia:folia-api:1.20.4-R0.1-SNAPSHOT")
     compileOnly("com.github.retrooper:packetevents-spigot:2.13.0")
+    implementation("org.xerial:sqlite-jdbc:3.45.2.0")
 }
 
 java {

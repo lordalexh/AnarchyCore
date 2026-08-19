@@ -11,6 +11,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.SimpleCommandMap;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+import no.hammers.anarchycore.database.DatabaseManager;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -29,6 +30,32 @@ public final class AnarchyCore extends JavaPlugin {
     private final Set<UUID> pendingRelogNotices = ConcurrentHashMap.newKeySet();
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final AtomicInteger uniquePlayers = new AtomicInteger(0);
+    private final Set<UUID> vanishedPlayers = ConcurrentHashMap.newKeySet();
+    private DatabaseManager databaseManager;
+
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
+    }
+    
+    public boolean isVanished(UUID uuid) {
+        return vanishedPlayers.contains(uuid);
+    }
+    
+    public void setVanished(Player player, boolean vanished) {
+        if (vanished) {
+            vanishedPlayers.add(player.getUniqueId());
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (!online.hasPermission("anarchycore.vanish.see")) {
+                    online.hidePlayer(this, player);
+                }
+            }
+        } else {
+            vanishedPlayers.remove(player.getUniqueId());
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                online.showPlayer(this, player);
+            }
+        }
+    }
 
     @Override
     public void onLoad() {
@@ -41,6 +68,9 @@ public final class AnarchyCore extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+
+        this.databaseManager = new DatabaseManager(this);
+        this.databaseManager.initialize();
 
         // Ensure join counter syncs with existing players in config.yml on startup
         loadUniquePlayerCount();
@@ -58,6 +88,15 @@ public final class AnarchyCore extends JavaPlugin {
         registerCommand(new MessageCommand(this));
         registerCommand(new ReplyCommand(this));
         registerCommand(new StatsCommand(this));
+        registerCommand(new MuteCommand(this));
+        registerCommand(new UnmuteCommand(this));
+        registerCommand(new BanCommand(this));
+        registerCommand(new UnbanCommand(this));
+        registerCommand(new KickCommand());
+        registerCommand(new VanishCommand(this));
+        registerCommand(new InvseeCommand());
+        registerCommand(new EnderchestCommand());
+        registerCommand(new AnarchyReloadCommand(this));
 
         // Register Event Listeners
         var pm = getServer().getPluginManager();
@@ -65,6 +104,7 @@ public final class AnarchyCore extends JavaPlugin {
         pm.registerEvents(new DeathListener(this), this);
         pm.registerEvents(new ChatListener(this), this);
         pm.registerEvents(new JoinListener(this), this);
+        pm.registerEvents(new BanListener(this), this);
         pm.registerEvents(new ItemCleanerListener(this), this);
         pm.registerEvents(new SecurityListener(), this);
         pm.registerEvents(new CombatListener(this), this);
@@ -79,6 +119,10 @@ public final class AnarchyCore extends JavaPlugin {
     public void onDisable() {
         // Terminate PacketEvents pipeline cleanly on shutdown
         PacketEvents.getAPI().terminate();
+        
+        if (this.databaseManager != null) {
+            this.databaseManager.close();
+        }
     }
 
     /**
@@ -95,6 +139,11 @@ public final class AnarchyCore extends JavaPlugin {
                     max = joinNum;
                 }
             }
+        }
+        
+        int dbMax = this.databaseManager.getMaxJoinNumber();
+        if (dbMax > max) {
+            max = dbMax;
         }
 
         uniquePlayers.set(max);
@@ -121,9 +170,13 @@ public final class AnarchyCore extends JavaPlugin {
 
     private void startTablistUpdater() {
         getServer().getAsyncScheduler().runAtFixedRate(this, task -> {
+            double rawMspt = fetchMspt();
+            double roundedMspt = Math.round(rawMspt * 10.0) / 10.0;
+            String msptFormatted = roundedMspt + "ms";
+
             for (Player player : getServer().getOnlinePlayers()) {
                 player.getScheduler().run(this, scheduledTask -> {
-                    updatePlayerTablist(player);
+                    updatePlayerTablist(player, msptFormatted);
                     updateCombatActionBar(player);
                 }, null);
             }
@@ -189,15 +242,12 @@ public final class AnarchyCore extends JavaPlugin {
         }
     }
 
-    public void updatePlayerTablist(Player player) {
+    public void updatePlayerTablist(Player player, String msptFormatted) {
         if (!player.isOnline()) return;
 
         double[] regionTps = fetchRegionTps(player.getLocation());
         double rawTps = (regionTps != null && regionTps.length > 0) ? regionTps[0] : 20.0;
         double roundedTps = Math.min(20.0, Math.round(rawTps * 10.0) / 10.0);
-
-        double rawMspt = fetchMspt();
-        double roundedMspt = Math.round(rawMspt * 10.0) / 10.0;
 
         String tpsColorTag = roundedTps >= 18.0 ? "green" : (roundedTps >= 13.0 ? "yellow" : "red");
         String pingColorTag = player.getPing() < 80 ? "green" : (player.getPing() < 180 ? "yellow" : "red");
@@ -207,7 +257,6 @@ public final class AnarchyCore extends JavaPlugin {
 
         String pingFormatted = "<" + pingColorTag + ">" + player.getPing() + "ms</" + pingColorTag + ">";
         String tpsFormatted = "<" + tpsColorTag + ">" + roundedTps + "</" + tpsColorTag + ">";
-        String msptFormatted = roundedMspt + "ms";
 
         String footerRaw = footerTemplate
                 .replace("<ping>", pingFormatted)
@@ -232,19 +281,33 @@ public final class AnarchyCore extends JavaPlugin {
 
         int ogThreshold = getConfig().getInt("og-threshold", 0);
         if (ogThreshold > 0) {
-            int joinNumber = getConfig().getInt("players." + player.getUniqueId() + ".join-number", -1);
+            int joinNumber = databaseManager.getJoinNumber(player.getUniqueId());
+            if (joinNumber == -1) {
+                // Fallback to config if not migrated
+                joinNumber = getConfig().getInt("players." + player.getUniqueId() + ".join-number", -1);
+            }
             if (joinNumber > 0 && joinNumber <= ogThreshold) return true;
         }
 
         return false;
     }
 
+    private Method regionTpsMethod = null;
+    private boolean regionTpsMethodFetched = false;
+
     private double[] fetchRegionTps(Location loc) {
         if (loc == null) return null;
         try {
-            Method method = getServer().getClass().getMethod("getRegionTPS", Location.class);
-            Object result = method.invoke(getServer(), loc);
-            if (result instanceof double[] array && array.length > 0) return array;
+            if (!regionTpsMethodFetched) {
+                try {
+                    regionTpsMethod = getServer().getClass().getMethod("getRegionTPS", Location.class);
+                } catch (NoSuchMethodException ignored) {}
+                regionTpsMethodFetched = true;
+            }
+            if (regionTpsMethod != null) {
+                Object result = regionTpsMethod.invoke(getServer(), loc);
+                if (result instanceof double[] array && array.length > 0) return array;
+            }
         } catch (Throwable ignored) {}
         return Bukkit.getTPS();
     }

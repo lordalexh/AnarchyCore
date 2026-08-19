@@ -22,6 +22,14 @@ public class ChatListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
+        
+        if (plugin.getDatabaseManager().hasActivePunishment(player.getUniqueId(), "mute")) {
+            event.setCancelled(true);
+            String reason = plugin.getDatabaseManager().getActivePunishmentReason(player.getUniqueId(), "mute");
+            player.sendMessage(miniMessage.deserialize("<red>You cannot speak because you are muted.\nReason: " + reason + "</red>"));
+            return;
+        }
+        
         String plain = PlainTextComponentSerializer.plainText().serialize(event.message());
 
         // 1. Format 4chan Greentext
